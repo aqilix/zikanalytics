@@ -57,10 +57,12 @@ $client = new Client(
 
 header('Content-Type: application/json');
 try {
-    $loginPage  = getPage($client, $cookieJar, '/User/Login');
-    $loginToken = getRequestToken($loginPage);
-    if (doAuthentication($client, $username, $password, $loginToken, $cookieJar)) {
+    if (!isLogin($cookieJar)) {
+        $loginPage  = getPage($client, $cookieJar, '/User/Login');
+        $loginToken = getRequestToken($loginPage);
+        doAuthentication($client, $username, $password, $loginToken, $cookieJar);
     }
+
     $searchPage  = getPage($client, $cookieJar, '/SearchCompetitor/Index');
     $searchToken = getRequestToken($searchPage);
     $competitor  = $_GET['competitor'] ?? ''; 
@@ -71,14 +73,36 @@ try {
 }
 
 /**
+ * Check user is login or not
+ *
+ * @param  FileCookieJar $cookieJar
+ * @return bool
+ */
+function isLogin($cookieJar)
+{
+    $isLogin = false;
+    $it = $cookieJar->getIterator();
+    while ($it->valid()) {
+        // check this cookie exist or not
+        if ($it->current()->getName() === 'UserAlready') {
+            $isLogin = true;
+        }
+
+        $it->next();
+    }
+
+    return $isLogin;
+}
+
+/**
  * Authentication 
  *
  * @param GuzzleHttp\Client $client
- * @param string  $username
- * @param string  $password
- * @param string  $token
- * @param FileCookieJar        $cookieJar
- * @param string  $uri
+ * @param string            $username
+ * @param string            $password
+ * @param string            $token
+ * @param FileCookieJar     $cookieJar
+ * @param string            $uri
  *
  * @return bool
  */
@@ -115,9 +139,9 @@ function doAuthentication(GuzzleHttp\Client $client, string $username, string $p
 /**
  * Get Login Page
  *
- * @param GuzzleHttp\Client  $client
- * @param FileCookieJar      $cookieJar
- * @param string             $uri
+ * @param GuzzleHttp\Client $client
+ * @param FileCookieJar     $cookieJar
+ * @param string            $uri
  *
  * @return string
  * @throw  \RuntimeException
@@ -162,10 +186,10 @@ function getRequestToken(string $html)
 /**
  * Search Competitor
  *
- * @param GuzzleHttp\Client    $client
- * @param string               $token 
- * @param FileCookieJar        $cookieJar
- * @param string               $id
+ * @param GuzzleHttp\Client $client
+ * @param string            $token 
+ * @param FileCookieJar     $cookieJar
+ * @param string            $id
  *
  * @return string
  */
