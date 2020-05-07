@@ -1,0 +1,16 @@
+{
+    "name": "aqilix/zikanalytics",
+    "type": "project",
+    "description": "Zikanalitycs.com Automation",
+    "keywords": [
+        "analytics"
+    ],
+    "license": "MIT",
+    "require": {
+        "php": "^7.1.3",
+        "guzzlehttp/guzzle": "~6.0"
+    },
+    "require-dev": {
+	"squizlabs/php_codesniffer": "^2.6"
+    }
+}

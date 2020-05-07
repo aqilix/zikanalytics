@@ -1,0 +1,5 @@
+data/cookies/
+!data/cookies/.gitkeep
+vendor
+.git
+composer.phar
