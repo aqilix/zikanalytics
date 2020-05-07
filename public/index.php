@@ -63,7 +63,7 @@ try {
     }
     $searchPage  = getPage($client, $cookieJar, '/SearchCompetitor/Index');
     $searchToken = getRequestToken($searchPage);
-    $competitor  = isset($_GET['competitor']) ?? $_GET['competitor'];
+    $competitor  = $_GET['competitor'] ?? ''; 
     echo searchCompetitor($client, $searchToken, $cookieJar, $competitor);
 } catch (\RuntimeException $e) {
     $response = ['status' => 'error', 'mesage' => $e->getMessage()];
