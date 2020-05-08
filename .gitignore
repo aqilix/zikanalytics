@@ -1,4 +1,5 @@
 data/cookies/
+config/local.php
 !data/cookies/.gitkeep
 vendor
 .git

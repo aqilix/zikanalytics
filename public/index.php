@@ -27,31 +27,17 @@ if (! file_exists('vendor/autoload.php')) {
 // Setup autoloading
 require 'vendor/autoload.php';
 
+$configs = include_once 'config/local.php';
+
 use GuzzleHttp\Client;
 use GuzzleHttp\Cookie\FileCookieJar;
 
 // file to store cookie data
-$cookieFile = getcwd() . '/data/cookies/jar.txt';
-$cookieJar  = new FileCookieJar($cookieFile, true);
-$baseUri    = 'https://www.zikanalytics.com';
-$username   = 'aroosya18@gmail.com';
-$password   = 'zik96981';
-$defaultUserAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) '
-                  . 'Chrome/81.0.4044.122 Safari/537.36';
-$defaultHeaders = [
-    'Content-Type' => 'application/x-www-form-urlencoded; charset=UTF-8',
-    'User-Agent' => $defaultUserAgent,
-    "Accept-Encoding" =>  'gzip, deflate, br',
-    'Origin'     => $baseUri,
-    'set-fetch-dest' => 'empty',
-    'set-fetch-mode' => 'cors',
-    'set-fetch-site' => 'same-origin'
-]; 
-
+$cookieJar  = new FileCookieJar($configs['cookie_file'], true);
 $client = new Client(
     [
-    'base_uri' => $baseUri,
-    'cookies'  => $cookieJar
+        'base_uri' => $configs['base_uri'],
+        'cookies'  => $cookieJar
     ]
 );
 
@@ -60,7 +46,7 @@ try {
     if (!isLogin($cookieJar)) {
         $loginPage  = getPage($client, $cookieJar, '/User/Login');
         $loginToken = getRequestToken($loginPage);
-        doAuthentication($client, $username, $password, $loginToken, $cookieJar);
+        doAuthentication($client, $configs['username'], $configs['password'], $loginToken, $cookieJar);
     }
 
     $searchPage  = getPage($client, $cookieJar, '/SearchCompetitor/Index');
@@ -108,15 +94,15 @@ function isLogin($cookieJar)
  */
 function doAuthentication(GuzzleHttp\Client $client, string $username, string $password, string $token, $cookieJar, string $uri = '/User/Login')
 {
-    global $defaultHeaders;
+    global $configs;
     $response = $client->request(
         'POST', $uri, [
             'cookies' => $cookieJar,
-            'headers' => $defaultHeaders,
+            'headers' => $configs['headers'],
             'form_params' => [
                 '__RequestVerificationToken' => $token,
-                'Username' => $username,
-                'Password' => $password,
+                'Username' => $configs['username'],
+                'Password' => $configs['password'],
                 'Zuda' => 'False'
             ],
             // 'debug' => true
@@ -148,11 +134,11 @@ function doAuthentication(GuzzleHttp\Client $client, string $username, string $p
  */
 function getPage(GuzzleHttp\Client $client, $cookieJar, string $uri)
 { 
-    global $defaultHeaders;
+    global $configs;
     $response = $client->request(
         'GET', $uri, [
         'cookies' => $cookieJar,
-        'headers' => $defaultHeaders
+        'headers' => $configs['headers']
         ]
     );
     $html = null;
@@ -195,7 +181,7 @@ function getRequestToken(string $html)
  */
 function searchCompetitor(GuzzleHttp\Client $client, $token, $cookieJar, $id = '')
 {
-    global $defaultHeaders;
+    global $configs;
     $uri  = '/SearchCompetitor/LoadCompetitor/';
     $data = [
         'draw'   =>  1,
@@ -284,7 +270,7 @@ function searchCompetitor(GuzzleHttp\Client $client, $token, $cookieJar, $id = '
     $response = $client->request(
         'POST', $uri, [
             'cookies' => $cookieJar,
-            'headers' => $defaultHeaders,
+            'headers' => $configs['headers'],
             'form_params' => $data
         ]
     );
