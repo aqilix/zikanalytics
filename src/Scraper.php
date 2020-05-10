@@ -204,6 +204,61 @@ class Scraper
     }
 
     /**
+     * @param string $keyword
+     */
+    public function searchProduct($keywords, $type, $location, $condition, $min, $max, $negative, $minFeedback, $maxFeedback, $drange) : ?string
+    {
+        if (! $this->isLogin()) {
+            $this->getCookieJar()->clear();
+            $loginPage  = $this->getPage('/User/Login');
+            $loginToken = $this->getRequestToken($loginPage);
+            $this->auth($loginToken);
+        }
+
+        return $this->fetchProductData($keywords, $type, $location, $condition, $min, $max, $negative, $minFeedback, $maxFeedback, $drange);
+    }
+
+    protected function fetchProductData($keywords, $type, $location, $condition, $min, $max, $negative, $minFeedback, $maxFeedback, $drange)
+    {
+        $data = [
+            'keywords' => $keywords,
+            'type' => $type,
+            'location' => $location,
+            'condition' => $condition,
+            'min' => $min,
+            'max' => $max,
+            'negative' => $negative,
+            'minFeedback' => $minFeedback,
+            'maxFeedback' => $maxFeedback,
+            'drance' => $drange
+        ];
+        $response = $this->getHttpClient()->request(
+            'POST',
+            '/Search/Index',
+            [
+                'cookies' => $this->getCookieJar(),
+                'headers' => $this->getConfigs()['headers'],
+                'form_params' => $data
+            ]
+        );
+
+        $return = null;
+        if ($response->getStatusCode() === 200) {
+            $return = $response->getBody();
+            /*
+            $body = json_decode($response->getBody(), true);
+            if ($body === null) {
+                throw new \RuntimeException('Searching Product Failed!');
+            } else {
+                $return = $response->getBody();
+            }
+             */
+        }
+
+        return $return;
+    }
+
+    /**
      * Search Competitor
      *
      * @param string  $token

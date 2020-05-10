@@ -31,11 +31,31 @@ use Zikanalytic\Scraper;
 
 $configs = include_once 'config/local.php';
 $scraper = new Scraper($configs);
-$competitor  = $_GET['competitor'] ?? '';
+$competitor = $_GET['competitor'] ?? '';
+$searchProduct = $_GET['product'] ?? null;
 header('Content-Type: application/json');
-try {
-    echo $scraper->searchCompetitor($competitor);
-} catch (\RuntimeException $e) {
-    $response = ['status' => 'error', 'mesage' => $e->getMessage()];
-    echo json_encode($response);
+if (! is_null($searchProduct)) {
+    try {
+        $keywords = $_GET['keywords'] ?? '';
+        $type = $_GET['type'] ?? '';
+        $location  = $_GET['location'] ?? '';
+        $condition = $_GET['condition'] ?? '';
+        $max = $_GET['max'] ?? '';
+        $min = $_GET['min'] ?? '';
+        $drange = $_GET['drange'] ?? '';
+        $negative = $_GET['negative'] ?? '';
+        $minFeedback = $_GET['minFeedback'] ?? '';
+        $maxFeedback = $_GET['maxFeedback'] ?? '';
+        echo $scraper->searchProduct($keywords, $type, $location, $condition, $min, $max, $negative, $minFeedback, $maxFeedback, $drange);
+    } catch (\RuntimeException $e) {
+        $response = ['status' => 'error', 'mesage' => $e->getMessage()];
+        echo json_encode($response);
+    }
+} else {
+    try {
+        echo $scraper->searchCompetitor($competitor);
+    } catch (\RuntimeException $e) {
+        $response = ['status' => 'error', 'mesage' => $e->getMessage()];
+        echo json_encode($response);
+    }
 }
