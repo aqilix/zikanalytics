@@ -36,7 +36,7 @@ class Scraper
      *
      * @return array
      */
-    function getConfigs() : array
+    public function getConfigs() : array
     {
         return $this->configs;
     }
@@ -47,7 +47,7 @@ class Scraper
      *
      * @return \GuzzleHttp\Cookie\FileCookieJar
      */
-    function getCookieJar() : \GuzzleHttp\Cookie\FileCookieJar
+    public function getCookieJar() : \GuzzleHttp\Cookie\FileCookieJar
     {
         if ($this->cookieJar === null) {
             $this->cookieJar  = new FileCookieJar($this->getConfigs()['cookie_file'], true);
@@ -62,7 +62,7 @@ class Scraper
      *
      * @return \GuzzleHttp\Client
      */
-    function getHttpClient(): \GuzzleHttp\Client
+    public function getHttpClient(): \GuzzleHttp\Client
     {
         if ($this->httpClient === null) {
             $this->httpClient = new Client(
@@ -76,19 +76,22 @@ class Scraper
         return $this->httpClient;
     }
 
+    // public function searchCompetitor(
+
     /**
      * Check user is login or not
      *
      * @param  FileCookieJar $cookieJar
      * @return bool
      */
-    function isLogin()
+    protected function isLogin()
     {
         $isLogin = false;
         $it = $this->getCookieJar()->getIterator();
         while ($it->valid()) {
             // check this cookie exist or not
             if ($it->current()->getName() === '_zlc901285') {
+                // echo $it->current()->getExpires(), PHP_EOL;
                 $isLogin = true;
             }
 
@@ -106,7 +109,7 @@ class Scraper
      *
      * @return bool
      */
-    function auth(string $token, string $uri = '/User/Login') : bool
+    protected function auth(string $token, string $uri = '/User/Login') : bool
     {
         $response = $this->getHttpClient()->request(
             'POST',
@@ -171,7 +174,7 @@ class Scraper
      *
      * @return string|null
      */
-    function getRequestToken(string $html) : string
+    function getRequestToken(string $html) : ?string
     {
         $matchedToken = [];
         $requestToken = null;
@@ -184,21 +187,38 @@ class Scraper
     }
 
     /**
+     * @param string $competitorId
+     */
+    function searchCompetitor(string $competitorId) : ?string
+    {
+        if (! $this->isLogin()) {
+            $this->getCookieJar()->clear();
+            $loginPage  = $this->getPage('/User/Login');
+            $loginToken = $this->getRequestToken($loginPage);
+            $this->auth($loginToken);
+        }
+
+        $searchPage  = $this->getPage('/SearchCompetitor/Index');
+        $searchToken = $this->getRequestToken($searchPage);
+        return $this->fetchCompetitorData($searchToken, $competitorId);
+    }
+
+    /**
      * Search Competitor
      *
      * @param string  $token
-     * @param string  $id
+     * @param string  $competitorId
      *
      * @return string
      */
-    function searchCompetitor($token, $id = '')
+    protected function fetchCompetitorData($token, $competitorId = '') : ?string
     {
         $uri  = '/SearchCompetitor/LoadCompetitor/';
         $data = [
             'draw'   => 1,
             'start'  => 0,
             'length' => 50,
-            'competitor' => $id,
+            'competitor' => $competitorId,
             'drange' => 30,
             'min'  => '',
             'max'  => '',

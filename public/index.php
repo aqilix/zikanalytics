@@ -30,34 +30,11 @@ require 'vendor/autoload.php';
 use Zikanalytic\Scraper;
 
 $configs = include_once 'config/local.php';
-
-/*
-use GuzzleHttp\Client;
-use GuzzleHttp\Cookie\FileCookieJar;
-
-// file to store cookie data
-$cookieJar  = new FileCookieJar($configs['cookie_file'], true);
-$client = new Client(
-    [
-        'base_uri' => $configs['base_uri'],
-        'cookies'  => $cookieJar
-    ]
-);
-
- */
-header('Content-Type: application/json');
 $scraper = new Scraper($configs);
+$competitor  = $_GET['competitor'] ?? '';
+header('Content-Type: application/json');
 try {
-    if (! $scraper->isLogin()) {
-        $loginPage  = $scraper->getPage('/User/Login');
-        $loginToken = $scraper->getRequestToken($loginPage);
-        $scraper->auth($loginToken);
-    }
-
-    $searchPage  = $scraper->getPage('/SearchCompetitor/Index');
-    $searchToken = $scraper->getRequestToken($searchPage);
-    $competitor  = $_GET['competitor'] ?? '';
-    echo $scraper->searchCompetitor($searchToken, $competitor);
+    echo $scraper->searchCompetitor($competitor);
 } catch (\RuntimeException $e) {
     $response = ['status' => 'error', 'mesage' => $e->getMessage()];
     echo json_encode($response);
