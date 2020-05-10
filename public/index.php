@@ -24,11 +24,14 @@ if (! file_exists('vendor/autoload.php')) {
     );
 }
 
-// Setup autoloading
+// setup autoloading
 require 'vendor/autoload.php';
+
+use Zikanalytic\Scraper;
 
 $configs = include_once 'config/local.php';
 
+/*
 use GuzzleHttp\Client;
 use GuzzleHttp\Cookie\FileCookieJar;
 
@@ -41,249 +44,21 @@ $client = new Client(
     ]
 );
 
+ */
 header('Content-Type: application/json');
+$scraper = new Scraper($configs);
 try {
-    if (!isLogin($cookieJar)) {
-        $loginPage  = getPage($client, $cookieJar, '/User/Login');
-        $loginToken = getRequestToken($loginPage);
-        doAuthentication($client, $configs['username'], $configs['password'], $loginToken, $cookieJar);
+    if (! $scraper->isLogin()) {
+        $loginPage  = $scraper->getPage('/User/Login');
+        $loginToken = $scraper->getRequestToken($loginPage);
+        $scraper->auth($loginToken);
     }
 
-    $searchPage  = getPage($client, $cookieJar, '/SearchCompetitor/Index');
-    $searchToken = getRequestToken($searchPage);
-    $competitor  = $_GET['competitor'] ?? ''; 
-    echo searchCompetitor($client, $searchToken, $cookieJar, $competitor);
+    $searchPage  = $scraper->getPage('/SearchCompetitor/Index');
+    $searchToken = $scraper->getRequestToken($searchPage);
+    $competitor  = $_GET['competitor'] ?? '';
+    echo $scraper->searchCompetitor($searchToken, $competitor);
 } catch (\RuntimeException $e) {
     $response = ['status' => 'error', 'mesage' => $e->getMessage()];
     echo json_encode($response);
-}
-
-/**
- * Check user is login or not
- *
- * @param  FileCookieJar $cookieJar
- * @return bool
- */
-function isLogin($cookieJar)
-{
-    $isLogin = false;
-    $it = $cookieJar->getIterator();
-    while ($it->valid()) {
-        // check this cookie exist or not
-        if ($it->current()->getName() === 'UserAlready') {
-            $isLogin = true;
-        }
-
-        $it->next();
-    }
-
-    return $isLogin;
-}
-
-/**
- * Authentication 
- *
- * @param GuzzleHttp\Client $client
- * @param string            $username
- * @param string            $password
- * @param string            $token
- * @param FileCookieJar     $cookieJar
- * @param string            $uri
- *
- * @return bool
- */
-function doAuthentication(GuzzleHttp\Client $client, string $username, string $password, string $token, $cookieJar, string $uri = '/User/Login')
-{
-    global $configs;
-    $response = $client->request(
-        'POST', $uri, [
-            'cookies' => $cookieJar,
-            'headers' => $configs['headers'],
-            'form_params' => [
-                '__RequestVerificationToken' => $token,
-                'Username' => $configs['username'],
-                'Password' => $configs['password'],
-                'Zuda' => 'False'
-            ],
-            // 'debug' => true
-        ]
-    );
-
-    $return = false;
-    if ($response->getStatusCode() === 200) {
-        $body = json_decode($response->getBody(), true);
-        if (isset($body['Url']) && $body['Url'] == '/Index/Index') {
-            $return = true;
-        } else {
-            throw new RuntimeException($body['Message'], $body['StatusCode']);
-        }
-    }
-
-    return $return;
-}
-
-/**
- * Get Login Page
- *
- * @param GuzzleHttp\Client $client
- * @param FileCookieJar     $cookieJar
- * @param string            $uri
- *
- * @return string
- * @throw  \RuntimeException
- */
-function getPage(GuzzleHttp\Client $client, $cookieJar, string $uri)
-{ 
-    global $configs;
-    $response = $client->request(
-        'GET', $uri, [
-        'cookies' => $cookieJar,
-        'headers' => $configs['headers']
-        ]
-    );
-    $html = null;
-    if ($response->getStatusCode() !== 200) {
-        throw new RuntimeException($response->getBody(), $response->getStatusCode());
-    }
-
-    $html = $response->getBody();
-    return $html;
-}
-
-/**
- * Get Request Token
- *
- * @param string $html
- *
- * @return string|null
- */
-function getRequestToken(string $html)
-{
-    $matchedToken = [];
-    $requestToken = null;
-    $isTokenExist = preg_match_all('/\"__RequestVerificationToken\" type=\"hidden\" value=\"([^\ ]*)\"/', $html, $matchedToken, PREG_PATTERN_ORDER);
-    if ($isTokenExist !== false) {
-        $requestToken = $matchedToken[1][0];
-    }
-
-    return $requestToken;
-} 
-
-/**
- * Search Competitor
- *
- * @param GuzzleHttp\Client $client
- * @param string            $token 
- * @param FileCookieJar     $cookieJar
- * @param string            $id
- *
- * @return string
- */
-function searchCompetitor(GuzzleHttp\Client $client, $token, $cookieJar, $id = '')
-{
-    global $configs;
-    $uri  = '/SearchCompetitor/LoadCompetitor/';
-    $data = [
-        'draw'   =>  1,
-        'start'  =>  0,
-        'length' => 50,
-        'competitor' => $id,
-        'drange' =>  30,
-        'min'  =>  '',
-        'max'  =>  '',
-        'minCurrentPrice'  =>  '',
-        'maxCurrentPrice'  =>  '',
-        'LastSalePriceMin'  =>  '',
-        'LastSalePriceMax'  =>  '',
-        'minamazon'   =>  '',
-        'maxamazon'   =>  '',
-        'searchText'  =>  '',
-        'search'  => ['value' => '', 'regex' => false],
-        'columns' => [
-            [
-                'data' => 'ItemID',
-                'name' => 'SelectedColumnSales',
-                'searchable' => true,
-                'orderable' => true,
-                'search' => ['value' => '', 'regex' => false]
-            ],
-            [
-                "data" => 'Title',
-                "name" => 'Title',
-                "searchable" => true,
-                "orderable" => true,
-                "search" => ["value" => '', "regex" => false]
-            ],
-            [
-                'data' => 'UploadDate',
-                'name' => 'UploadDate',
-                'searchable' => true,
-                'orderable'  => true,
-                'search' => ['value' => '', 'regex' => false]
-            ],
-            [
-                'data' => 'SelectedColumnSales',
-                'name' => 'SelectedColumnSales',
-                'searchable' => true,
-                'orderable'  => true,
-                'search' => ['value' => '', 'regex' => false]
-            ],
-            [
-                'data' => 'QuantitySold',
-                'name' => 'QuantitySold',
-                'searchable' => true,
-                'orderable'  => true,
-                'search' => ['value' => '', 'regex' => false]
-            ],
-            [
-                'data' => 'CurrentPrice',
-                'name' => 'CurrentPrice',
-                'searchable' => true,
-                'orderable'  => true,
-                'search' => ['value' => '', 'regex' => false]
-            ],
-            [
-                'data' => 6,
-                'name' => 'CurrentPrice',
-                'searchable' => true,
-                'orderable'  => true,
-                'search' => ['value' => '', 'regex' => false]
-            ],
-            [
-                'data' => 'UPC',
-                'name' => 'Title',
-                'searchable' => true,
-                'orderable'  => true,
-                'search' => ['value' => '', 'regex' => false]
-            ],
-            [
-                'data' => 'Title',
-                'name' => 'Title',
-                'searchable' => true,
-                'orderable'  => true,
-                'search' => ['value' => '', 'regex' => false]
-            ],
-        ]
-    ];
-
-    $data['__RequestVerificationToken'] = $token;
-    $response = $client->request(
-        'POST', $uri, [
-            'cookies' => $cookieJar,
-            'headers' => $configs['headers'],
-            'form_params' => $data
-        ]
-    );
-
-    $return = null;
-    if ($response->getStatusCode() === 200) {
-        $body = json_decode($response->getBody(), true);
-        if ($body === null) {
-            throw new RuntimeException('Searching Competitor Failed!');
-        } else {
-            $return = $response->getBody();
-        }
-    }
-
-    return $return;
 }

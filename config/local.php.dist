@@ -1,8 +1,8 @@
 <?php
 return [
     'base_uri' => 'https://www.zikanalytics.com',
-    'username' => 'aroosya18@gmail.com',
-    'password' => 'zik96981',
+    'username' => '',
+    'password' => '',
     'cookie_file' => getcwd() . '/data/cookies/jar.txt',
     'headers'  => [
         'Content-Type' => 'application/x-www-form-urlencoded; charset=UTF-8',
