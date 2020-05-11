@@ -206,7 +206,7 @@ class Scraper
     /**
      * @param string $keyword
      */
-    public function searchProduct($keywords, $type, $location, $condition, $min, $max, $negative, $minFeedback, $maxFeedback, $drange) : ?string
+    public function searchProduct($keywords, $type, $location, $condition, $min, $max, $negative, $minFeedback, $maxFeedback, $drange) : ?array
     {
         if (! $this->isLogin()) {
             $this->getCookieJar()->clear();
@@ -264,35 +264,32 @@ class Scraper
         return $return;
     }
 
-    protected function parseProductData(string $html) : ?string
+    protected function parseProductData(string $html) : ?array
     {
         libxml_use_internal_errors(false);
         $dom = new \DomDocument();
         $html  = @$dom->loadHTML($html);
         $table = $dom->getElementById('productTBody');
-        // $xpath = new DOMXPath($dom);
-        // foreach ($xpath->evaluate('//*[count(*) = 0]') as $node) {
-          // var_dump($node->nodeName);
-        // }
         $nodes = $table->childNodes;
-        foreach ($nodes as $child) {
-            $records = $child->childNodes;
-            foreach ($records as $i => $record) {
-                if ($i == 0) {
-                    continue;
-                }
-
-                echo strip_tags($record->textContent);
-                // $r = $record->childNodes(;
-                // echo $r[0]->text;
-
-                // echo $record->textContent;
+	$products = [];
+        foreach ($nodes as $child) { 
+            if ($child->tagName !== 'tr') {
+                continue;
             }
+        
+            $trHtml = $child->ownerDocument->saveXML($child);
+            $productUrl = self::parseProductUrl($trHtml);
+            $product = [
+                'id'  => basename($productUrl),
+                'url' => $productUrl,
+                'name'  => self::parseProductName($trHtml),
+                'price' => self::parseProductPrice($trHtml),
+            ];
+	    $products[] = $product;
         }
 
-        return null;
+        return $products;
     }
-
 
     /**
      * Search Competitor
@@ -409,5 +406,53 @@ class Scraper
         }
 
         return $return;
+    }
+
+    /**
+     * Parse Product Name
+     *
+     * @param string  html
+     */
+    protected static function parseProductName(string $html) : ?string
+    {
+        $productExist = preg_match_all('/<h5>(.*)<\/h5>/', $html, $matchedTr, PREG_PATTERN_ORDER);
+        $product = null;
+        if ($productExist) { 
+           $product = html_entity_decode($matchedTr[1][0]);
+        }
+    
+        return $product;
+    }
+    
+    /**
+     * Parse Product Price
+     *
+     * @param string  html
+     */
+    protected static function parseProductPrice(string $html) : ?string
+    {
+        $priceExist = preg_match_all('/<b>(.*)<\/b>/', $html, $matchedTr, PREG_PATTERN_ORDER);
+        $price = null;
+        if ($priceExist) { 
+           $price = $matchedTr[1][0];
+        }
+    
+        return $price;
+    }
+    
+    /**
+     * Parse Product URL
+     *
+     * @param string  html
+     */
+    protected static function parseProductUrl(string $html) : ?string
+    {
+        $urlExist = preg_match_all('/href="([^"]*)"/', $html, $matchedTr, PREG_PATTERN_ORDER);
+        $url = null;
+        if ($urlExist) { 
+           $url = $matchedTr[1][0];
+        }
+    
+        return $url;
     }
 }

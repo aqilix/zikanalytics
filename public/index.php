@@ -46,7 +46,7 @@ if (! is_null($searchProduct)) {
         $negative = $_GET['negative'] ?? '';
         $minFeedback = $_GET['minFeedback'] ?? '';
         $maxFeedback = $_GET['maxFeedback'] ?? '';
-        echo $scraper->searchProduct($keywords, $type, $location, $condition, $min, $max, $negative, $minFeedback, $maxFeedback, $drange);
+        echo json_encode($scraper->searchProduct($keywords, $type, $location, $condition, $min, $max, $negative, $minFeedback, $maxFeedback, $drange));
     } catch (\RuntimeException $e) {
         $response = ['status' => 'error', 'mesage' => $e->getMessage()];
         echo json_encode($response);
