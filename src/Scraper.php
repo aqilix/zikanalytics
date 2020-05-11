@@ -244,19 +244,55 @@ class Scraper
 
         $return = null;
         if ($response->getStatusCode() === 200) {
-            $return = $response->getBody();
+            try {
+                $return = $this->parseProductData($response->getBody());
+            } catch (\RuntimeException $e) {
+                throw new \RuntimeException('Parsing Product Data Failed!');
+            }
+
             /*
             $body = json_decode($response->getBody(), true);
             if ($body === null) {
-                throw new \RuntimeException('Searching Product Failed!');
             } else {
                 $return = $response->getBody();
             }
              */
+        } else {
+           throw new \RuntimeException('Searching Product Failed!');
         }
 
         return $return;
     }
+
+    protected function parseProductData(string $html) : ?string
+    {
+        libxml_use_internal_errors(false);
+        $dom = new \DomDocument();
+        $html  = @$dom->loadHTML($html);
+        $table = $dom->getElementById('productTBody');
+        // $xpath = new DOMXPath($dom);
+        // foreach ($xpath->evaluate('//*[count(*) = 0]') as $node) {
+          // var_dump($node->nodeName);
+        // }
+        $nodes = $table->childNodes;
+        foreach ($nodes as $child) {
+            $records = $child->childNodes;
+            foreach ($records as $i => $record) {
+                if ($i == 0) {
+                    continue;
+                }
+
+                echo strip_tags($record->textContent);
+                // $r = $record->childNodes(;
+                // echo $r[0]->text;
+
+                // echo $record->textContent;
+            }
+        }
+
+        return null;
+    }
+
 
     /**
      * Search Competitor
