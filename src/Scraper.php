@@ -42,7 +42,6 @@ class Scraper
     }
 
     /**
-     *
      * Get Gookie Jar
      *
      * @return \GuzzleHttp\Cookie\FileCookieJar
@@ -57,7 +56,6 @@ class Scraper
     }
 
     /**
-     *
      * Get Http Client
      *
      * @return \GuzzleHttp\Client
@@ -76,8 +74,6 @@ class Scraper
         return $this->httpClient;
     }
 
-    // public function searchCompetitor(
-
     /**
      * Check user is login or not
      *
@@ -91,7 +87,6 @@ class Scraper
         while ($it->valid()) {
             // check this cookie exist or not
             if ($it->current()->getName() === '_zlc901285') {
-                // echo $it->current()->getExpires(), PHP_EOL;
                 $isLogin = true;
             }
 
@@ -104,8 +99,8 @@ class Scraper
     /**
      * Authentication
      *
-     * @param string            $token
-     * @param string            $uri
+     * @param string $token
+     * @param string $uri
      *
      * @return bool
      */
@@ -204,7 +199,19 @@ class Scraper
     }
 
     /**
+     * Search Product based on keyword
+     *
      * @param string $keyword
+     * @param string $type
+     * @param string $location
+     * @param string $condition
+     * @param string $min
+     * @param string $max
+     * @param string $minFeedBack
+     * @param string $maxFeedBack
+     * @param string $drange
+     *
+     * @return array
      */
     public function searchProduct($keywords, $type, $location, $condition, $min, $max, $negative, $minFeedback, $maxFeedback, $drange) : ?array
     {
@@ -218,6 +225,21 @@ class Scraper
         return $this->fetchProductData($keywords, $type, $location, $condition, $min, $max, $negative, $minFeedback, $maxFeedback, $drange);
     }
 
+    /**
+     * Search Product based on keyword
+     *
+     * @param string $keyword
+     * @param string $type
+     * @param string $location
+     * @param string $condition
+     * @param string $min
+     * @param string $max
+     * @param string $minFeedBack
+     * @param string $maxFeedBack
+     * @param string $drange
+     *
+     * @return array
+     */
     protected function fetchProductData($keywords, $type, $location, $condition, $min, $max, $negative, $minFeedback, $maxFeedback, $drange)
     {
         $data = [
@@ -249,14 +271,6 @@ class Scraper
             } catch (\RuntimeException $e) {
                 throw new \RuntimeException('Parsing Product Data Failed!');
             }
-
-            /*
-            $body = json_decode($response->getBody(), true);
-            if ($body === null) {
-            } else {
-                $return = $response->getBody();
-            }
-             */
         } else {
            throw new \RuntimeException('Searching Product Failed!');
         }
@@ -264,6 +278,13 @@ class Scraper
         return $return;
     }
 
+    /**
+     * Parse Product
+     *
+     * @param string content
+     *
+     * @return array
+     */
     protected function parseProductData(string $html) : ?array
     {
         libxml_use_internal_errors(false);
@@ -271,7 +292,7 @@ class Scraper
         $html  = @$dom->loadHTML($html);
         $table = $dom->getElementById('productTBody');
         $nodes = $table->childNodes;
-	$products = [];
+	    $products = [];
         foreach ($nodes as $child) { 
             if ($child->tagName !== 'tr') {
                 continue;
