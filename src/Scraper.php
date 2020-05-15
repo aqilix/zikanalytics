@@ -139,20 +139,20 @@ class Scraper
      * Get Login Page
      *
      * @param string  $uri
+     * @param array   $query
      *
      * @return string
      * @throw  \RuntimeException
      */
-    function getPage(string $uri) : string
+    function getPage(string $uri, array $query = []) : string
     {
-        $response = $this->getHttpClient()->request(
-            'GET',
-            $uri,
-            [
+        $options  = [
             'cookies' => $this->getCookieJar(),
-            'headers' => $this->getConfigs()['headers']
-            ]
-        );
+            'headers' => $this->getConfigs()['headers'],
+            'query' => $query,
+            'debug' => true
+        ];
+        $response = $this->getHttpClient()->request('GET', $uri, $options);
         $html = null;
         if ($response->getStatusCode() !== 200) {
             throw new \RuntimeException($response->getBody(), $response->getStatusCode());
@@ -223,6 +223,67 @@ class Scraper
         }
 
         return $this->fetchProductData($keywords, $type, $location, $condition, $min, $max, $negative, $minFeedback, $maxFeedback, $drange);
+    }
+
+    /**
+     * Search Category based on keyword
+     *
+     * @param string $keyword
+     * @param string $type
+     * @param string $location
+     * @param string $condition
+     * @param string $min
+     * @param string $max
+     * @param string $minFeedBack
+     * @param string $maxFeedBack
+     * @param string $drange
+     *
+     * @return array
+     */
+    public function searchCategory($keywords, $type, $location, $condition, $min, $max, $negative, $minFeedback, $maxFeedback, $drange)
+    {
+        if (! $this->isLogin()) {
+            $this->getCookieJar()->clear();
+            $loginPage  = $this->getPage('/User/Login');
+            $loginToken = $this->getRequestToken($loginPage);
+            $this->auth($loginToken);
+        }
+
+        // page=1&keywords=ipad%20pro&type=FixedPrice&location=US&condition=New&min=&max=&exclude=&minFeedback=&maxFeedback=&categoryId=&cattxt=Select%20Category&subcattxt=&callFrom=index&gtQuickDate=&gtPeakDate=&gtPeakDateTo=&gtGeo=&gtPlatformSelect=
+        return $this->fetchCategoryResearch($keywords, $type, $location, $condition, $min, $max, $negative, $minFeedback, $maxFeedback, $drange);
+    }
+
+    /**
+     * Search Category Research based on keyword
+     *
+     * @param string $keyword
+     * @param string $type
+     * @param string $location
+     * @param string $condition
+     * @param string $min
+     * @param string $max
+     * @param string $minFeedBack
+     * @param string $maxFeedBack
+     * @param string $drange
+     *
+     * @return array
+     */
+    function fetchCategoryResearch($keywords, $type, $location, $condition, $min, $max, $negative, $minFeedback, $maxFeedback, $drange) 
+    {
+        $query = [
+            'keywords' => $keywords,
+            'type' => $type,
+            'location' => $location,
+            'condition' => $condition,
+            'min' => $min,
+            'max' => $max,
+            'negative' => $negative,
+            'minFeedback' => $minFeedback,
+            'maxFeedback' => $maxFeedback,
+            'drance' => $drange
+        ];
+        $loginPage  = $this->getPage('/CategoryResearch/Result', $query);
+        return $loginPage;
     }
 
     /**

@@ -31,31 +31,46 @@ use Zikanalytic\Scraper;
 
 $configs = include_once 'config/local.php';
 $scraper = new Scraper($configs);
-$competitor = $_GET['competitor'] ?? '';
-$searchProduct = $_GET['product'] ?? null;
+// $competitor = $_GET['competitor'] ?? '';
+$searchProduct  = $_GET['product'] ?? null;
+$searchCategory = $_GET['category'] ?? null;
+$keywords = $_GET['keywords'] ?? '';
+$type = $_GET['type'] ?? '';
+$location  = $_GET['location'] ?? '';
+$condition = $_GET['condition'] ?? '';
+$max = $_GET['max'] ?? '';
+$min = $_GET['min'] ?? '';
+$drange = $_GET['drange'] ?? '';
+$negative = $_GET['negative'] ?? '';
+$minFeedback = $_GET['minFeedback'] ?? '';
+$maxFeedback = $_GET['maxFeedback'] ?? '';
+$search   = $_GET['search'] ?? '';
 header('Content-Type: application/json');
-if (! is_null($searchProduct)) {
-    try {
-        $keywords = $_GET['keywords'] ?? '';
-        $type = $_GET['type'] ?? '';
-        $location  = $_GET['location'] ?? '';
-        $condition = $_GET['condition'] ?? '';
-        $max = $_GET['max'] ?? '';
-        $min = $_GET['min'] ?? '';
-        $drange = $_GET['drange'] ?? '';
-        $negative = $_GET['negative'] ?? '';
-        $minFeedback = $_GET['minFeedback'] ?? '';
-        $maxFeedback = $_GET['maxFeedback'] ?? '';
-        echo json_encode($scraper->searchProduct($keywords, $type, $location, $condition, $min, $max, $negative, $minFeedback, $maxFeedback, $drange));
-    } catch (\RuntimeException $e) {
-        $response = ['status' => 'error', 'mesage' => $e->getMessage()];
-        echo json_encode($response);
-    }
-} else {
-    try {
-        echo $scraper->searchCompetitor($competitor);
-    } catch (\RuntimeException $e) {
-        $response = ['status' => 'error', 'mesage' => $e->getMessage()];
-        echo json_encode($response);
-    }
+
+// if (! is_null($searchProduct)) {
+switch ($search) {
+    case 'product':
+        try {
+            echo json_encode($scraper->searchProduct($keywords, $type, $location, $condition, $min, $max, $negative, $minFeedback, $maxFeedback, $drange));
+        } catch (\RuntimeException $e) {
+            $response = ['status' => 'error', 'mesage' => $e->getMessage()];
+            echo json_encode($response);
+        }
+    break;
+    case 'category':
+        try {
+            echo json_encode($scraper->searchCategory($keywords, $type, $location, $condition, $min, $max, $negative, $minFeedback, $maxFeedback, $drange));
+        } catch (\RuntimeException $e) {
+            $response = ['status' => 'error', 'mesage' => $e->getMessage()];
+            echo json_encode($response);
+        }
+    break;
+    case 'competitor':
+        try {
+            echo $scraper->searchCompetitor($keywords);
+        } catch (\RuntimeException $e) {
+            $response = ['status' => 'error', 'mesage' => $e->getMessage()];
+            echo json_encode($response);
+        }
+    break;
 }
