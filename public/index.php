@@ -56,15 +56,16 @@ switch ($search) {
             $response = ['status' => 'error', 'mesage' => $e->getMessage()];
             echo json_encode($response);
         }
-    break;
+        break;
     case 'category':
         try {
             echo json_encode($scraper->searchCategory($keywords, $type, $location, $condition, $min, $max, $negative, $minFeedback, $maxFeedback, $drange));
+            //echo $scraper->searchCategory($keywords, $type, $location, $condition, $min, $max, $negative, $minFeedback, $maxFeedback, $drange);
         } catch (\RuntimeException $e) {
             $response = ['status' => 'error', 'mesage' => $e->getMessage()];
             echo json_encode($response);
         }
-    break;
+        break;
     case 'competitor':
         try {
             echo $scraper->searchCompetitor($keywords);
@@ -72,5 +73,5 @@ switch ($search) {
             $response = ['status' => 'error', 'mesage' => $e->getMessage()];
             echo json_encode($response);
         }
-    break;
+        break;
 }

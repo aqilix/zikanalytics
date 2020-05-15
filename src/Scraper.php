@@ -144,21 +144,22 @@ class Scraper
      * @return string
      * @throw  \RuntimeException
      */
-    function getPage(string $uri, array $query = []) : string
+    function getPage(string $uri, array $query = []) : ?string
     {
         $options  = [
             'cookies' => $this->getCookieJar(),
             'headers' => $this->getConfigs()['headers'],
             'query' => $query,
-            'debug' => true
+            //'debug' => true
         ];
         $response = $this->getHttpClient()->request('GET', $uri, $options);
         $html = null;
         if ($response->getStatusCode() !== 200) {
             throw new \RuntimeException($response->getBody(), $response->getStatusCode());
+        } else {
+            $html = $response->getBody();
         }
 
-        $html = $response->getBody();
         return $html;
     }
 
@@ -249,7 +250,6 @@ class Scraper
             $this->auth($loginToken);
         }
 
-        // page=1&keywords=ipad%20pro&type=FixedPrice&location=US&condition=New&min=&max=&exclude=&minFeedback=&maxFeedback=&categoryId=&cattxt=Select%20Category&subcattxt=&callFrom=index&gtQuickDate=&gtPeakDate=&gtPeakDateTo=&gtGeo=&gtPlatformSelect=
         return $this->fetchCategoryResearch($keywords, $type, $location, $condition, $min, $max, $negative, $minFeedback, $maxFeedback, $drange);
     }
 
@@ -268,7 +268,7 @@ class Scraper
      *
      * @return array
      */
-    function fetchCategoryResearch($keywords, $type, $location, $condition, $min, $max, $negative, $minFeedback, $maxFeedback, $drange) 
+    function fetchCategoryResearch($keywords, $type, $location, $condition, $min, $max, $negative, $minFeedback, $maxFeedback, $drange)
     {
         $query = [
             'keywords' => $keywords,
@@ -280,10 +280,74 @@ class Scraper
             'negative' => $negative,
             'minFeedback' => $minFeedback,
             'maxFeedback' => $maxFeedback,
-            'drance' => $drange
+            'drance' => $drange,
+            'page' => 1,
+            'categoryId' => '',
         ];
-        $loginPage  = $this->getPage('/CategoryResearch/Result', $query);
-        return $loginPage;
+
+        $categoryPage = $this->getPage('/CategoryResearch/Result', $query);
+        $return = null;
+        if ($categoryPage !== null) {
+            $return = $this->parseCategoryData($categoryPage);
+        }
+
+        if ($return !== null) {
+            $selectedCategory = end($return);
+            if ($selectedCategory['name'] == 'Selected category') {
+                $return[count($return) - 1]['value'] = urldecode($keywords);
+            }
+        }
+
+        return $return;
+    }
+
+    /**
+     * Parse Category
+     *
+     * @param string content
+     *
+     * @return array
+     */
+    protected function parseCategoryData(string $html) : ?array
+    {
+        libxml_use_internal_errors(false);
+        $dom  = new \DomDocument();
+        $html = @$dom->loadHTML($html);
+        $categories = [];
+        $averageProductPrice = null;
+        $averageProductPriceMatch = [];
+        $isProductPriceMatch = preg_match(
+            '/#everage_product_price_currency_sign\"\)\.append\(sign\ + \" ([0-9\.]+)\"/',
+            $html,
+            $averageProductPriceMatch
+        );
+        if ($isProductPriceMatch) {
+            $averageProductPrice = $averageProductPriceMatch[0][0];
+        }
+
+        $table = $dom->getElementById('intercomCategoryCards');
+        $nodes = $table->childNodes;
+        foreach ($nodes as $child) {
+            $trHtml = $child->ownerDocument->saveXML($child);
+            $categoryName = self::parseCategoryName($trHtml);
+            if ($categoryName === null) {
+                continue;
+            }
+
+            if ($categoryName == 'Successful listings') {
+                $categoryValue = self::parseCategoryListing($trHtml);
+            } elseif ($categoryName == 'Sell through') {
+                $categoryValue = self::parseCategorySell($trHtml);
+            } elseif ($categoryName == 'Average product price') {
+                $categoryValue = $averageProductPrice;
+            } else {
+                $categoryValue = self::parseCategoryValue($trHtml);
+            }
+
+            $categories[] = ['name' => $categoryName, 'value' => trim($categoryValue)];
+        }
+
+        return $categories;
     }
 
     /**
@@ -333,7 +397,7 @@ class Scraper
                 throw new \RuntimeException('Parsing Product Data Failed!');
             }
         } else {
-           throw new \RuntimeException('Searching Product Failed!');
+            throw new \RuntimeException('Searching Product Failed!');
         }
 
         return $return;
@@ -353,12 +417,12 @@ class Scraper
         $html  = @$dom->loadHTML($html);
         $table = $dom->getElementById('productTBody');
         $nodes = $table->childNodes;
-	    $products = [];
-        foreach ($nodes as $child) { 
+        $products = [];
+        foreach ($nodes as $child) {
             if ($child->tagName !== 'tr') {
                 continue;
             }
-        
+
             $trHtml = $child->ownerDocument->saveXML($child);
             $productUrl = self::parseProductUrl($trHtml);
             $product = [
@@ -367,7 +431,7 @@ class Scraper
                 'name'  => self::parseProductName($trHtml),
                 'price' => self::parseProductPrice($trHtml),
             ];
-	    $products[] = $product;
+            $products[] = $product;
         }
 
         return $products;
@@ -499,13 +563,13 @@ class Scraper
     {
         $productExist = preg_match_all('/<h5>(.*)<\/h5>/', $html, $matchedTr, PREG_PATTERN_ORDER);
         $product = null;
-        if ($productExist) { 
-           $product = html_entity_decode($matchedTr[1][0]);
+        if ($productExist) {
+            $product = html_entity_decode($matchedTr[1][0]);
         }
-    
+
         return $product;
     }
-    
+
     /**
      * Parse Product Price
      *
@@ -515,13 +579,13 @@ class Scraper
     {
         $priceExist = preg_match_all('/<b>(.*)<\/b>/', $html, $matchedTr, PREG_PATTERN_ORDER);
         $price = null;
-        if ($priceExist) { 
-           $price = $matchedTr[1][0];
+        if ($priceExist) {
+            $price = $matchedTr[1][0];
         }
-    
+
         return $price;
     }
-    
+
     /**
      * Parse Product URL
      *
@@ -531,10 +595,90 @@ class Scraper
     {
         $urlExist = preg_match_all('/href="([^"]*)"/', $html, $matchedTr, PREG_PATTERN_ORDER);
         $url = null;
-        if ($urlExist) { 
-           $url = $matchedTr[1][0];
+        if ($urlExist) {
+            $url = $matchedTr[1][0];
         }
-    
+
         return $url;
+    }
+
+    /**
+     * Parse Category Name
+     *
+     * @param string  html
+     */
+    protected static function parseCategoryName(string $html) : ?string
+    {
+        $categoryExist = preg_match_all('/<p>(.*)<\/p>/', $html, $matchedTr, PREG_PATTERN_ORDER);
+        $category = null;
+        if ($categoryExist) {
+            $category = html_entity_decode($matchedTr[1][0]);
+        }
+
+        return $category;
+    }
+
+    /**
+     * Parse Category Value
+     *
+     * @param string  html
+     */
+    protected static function parseCategoryValue(string $html) : ?string
+    {
+        $categoryExist = preg_match_all('/<h2>(.*)<\/h2>/is', $html, $matchedTr, PREG_PATTERN_ORDER);
+        $category = null;
+        if ($categoryExist) {
+            $category = html_entity_decode($matchedTr[1][0]);
+        }
+
+        return $category;
+    }
+
+    /**
+     * Parse Category Sell
+     *
+     * @param string  html
+     */
+    protected static function parseCategorySell(string $html) : ?string
+    {
+        $categorySell = preg_match_all('/<div class=\"blue\">([^<]+)<\/div>/is', $html, $matchedTr, PREG_PATTERN_ORDER);
+        $category = null;
+        if ($categorySell) {
+            $category = html_entity_decode($matchedTr[1][0]);
+        }
+
+        return $category;
+    }
+
+    /**
+     * Parse Category Listing
+     *
+     * @param string  html
+     */
+    protected static function parseCategoryListing(string $html) : ?string
+    {
+        $categoryListing = preg_match_all('/<div class=\"countz\">([^<]*)<\/div>/is', $html, $matchedTr, PREG_PATTERN_ORDER);
+        $category = null;
+        if ($categoryListing) {
+            $category = html_entity_decode($matchedTr[1][0]);
+        }
+
+        return $category;
+    }
+
+    /**
+     * Parse Average Product
+     *
+     * @param string  html
+     */
+    protected static function parseAverageProduct(string $html) : ?string
+    {
+        $categoryExist = preg_match_all('/<div class=\"countz\">([^<]*)<\/div>/is', $html, $matchedTr, PREG_PATTERN_ORDER);
+        $category = null;
+        if ($categoryExist) {
+            $category = html_entity_decode($matchedTr[1][0]);
+        }
+
+        return $category;
     }
 }
